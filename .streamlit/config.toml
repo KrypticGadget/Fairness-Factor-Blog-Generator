@@ -1,0 +1,21 @@
+# .streamlit/config.toml
+[theme]
+primaryColor = "#0077BD"  # FF Accent Blue
+backgroundColor = "#00263E"  # FF Primary Blue
+secondaryBackgroundColor = "#005587"  # FF Secondary Blue
+textColor = "#FFFFFF"
+font = "sans serif"
+
+[server]
+port = 8501
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 200
+
+[browser]
+serverAddress = "0.0.0.0"
+gatherUsageStats = false
+
+[logger]
+level = "info"
+messageFormat = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
