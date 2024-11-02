@@ -4,9 +4,29 @@ import asyncio
 from typing import Dict, Any, Optional
 from llm.llm_client import AsyncLLMClient
 from utils.prompt_handler import AsyncPromptHandler
-from datetime import datetime
 import logging
 import json
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+def check_page_access(page_name: str) -> bool:
+    """Check if user has access to requested page"""
+    if not st.session_state.authenticated:
+        return False
+        
+    required_pages = {
+        'Topic Research': ['user', 'admin'],
+        'Topic Campaign': ['user', 'admin'],
+        'Article Draft': ['user', 'admin'],
+        'Editing Criteria': ['user', 'admin'],
+        'Final Article': ['user', 'admin'],
+        'Image Description': ['user', 'admin'],
+        'SEO Generation': ['user', 'admin']
+    }
+    
+    user_role = st.session_state.user.get('role', 'user')
+    return user_role in required_pages.get(page_name, [])
 
 logger = logging.getLogger(__name__)
 
@@ -100,26 +120,36 @@ async def generate_editing_suggestions(
             'error': str(e)
         }
 
-async def editing_criteria_page(
-    db_handlers: Dict[str, Any],
-    llm_client: AsyncLLMClient,
-    prompt_handler: AsyncPromptHandler
-):
+async def editing_criteria_page(db_handlers, llm_client, prompt_handler):
     """Editing Criteria Page Handler"""
     try:
-        # Check user authentication
-        if 'user' not in st.session_state or not st.session_state.user:
-            st.warning("Please log in to access this page.")
+        # Check authentication and access
+        if not st.session_state.authenticated:
+            st.warning("Please log in to access this page")
+            st.stop()
+            return
+            
+        if not check_page_access('Editing Criteria'):
+            st.error("You don't have permission to access this page")
+            st.stop()
             return
 
         user_email = st.session_state.user['email']
         
-        st.title("Fairness Factor Blog Editing Criteria")
-        
         # Check prerequisites
         if 'article_draft' not in st.session_state:
-            st.warning("⚠️ Please generate an article draft first.")
+            st.warning("⚠️ Please complete the Article Draft step first")
+            st.stop()
             return
+
+        # Log page access
+        await db_handlers['analytics'].log_activity(
+            user_email=user_email,
+            activity_type='page_access',
+            metadata={'page': 'Editing Criteria'}
+        )
+
+        # Existing page code continues here...
         
         # Display draft
         with st.expander("📄 Article Draft", expanded=False):

@@ -26,6 +26,7 @@ from pages.editing_criteria import editing_criteria_page
 from pages.final_article import final_article_page
 from pages.image_description import image_description_page
 from pages.seo_generation import seo_generation_page
+from pages.user_management import user_management_page
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -35,24 +36,43 @@ def initialize_session_state():
     """Initialize session state variables"""
     if 'initialized' not in st.session_state:
         st.session_state.initialized = False
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
     if 'user' not in st.session_state:
         st.session_state.user = None
     if 'user_token' not in st.session_state:
         st.session_state.user_token = None
     if 'session_id' not in st.session_state:
         st.session_state.session_id = None
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = "Login"
+    if 'page_history' not in st.session_state:
+        st.session_state.page_history = []
 
-def load_css(css_file: str) -> None:
-    """Load CSS file"""
-    try:
-        with open(css_file) as f:
-            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-    except Exception as e:
-        logger.error(f"Error loading CSS file: {str(e)}")
-        st.error(f"Error loading CSS file: {str(e)}")
+async def check_authentication():
+    """Check if user is authenticated and verify token"""
+    if not st.session_state.authenticated:
+        return False
+        
+    if st.session_state.user_token:
+        user = await st.session_state.auth_handler.verify_token(st.session_state.user_token)
+        if user:
+            st.session_state.user = user
+            return True
+            
+    # Clear session state if authentication fails
+    st.session_state.authenticated = False
+    st.session_state.user = None
+    st.session_state.user_token = None
+    return False
 
-def display_logo(context: str = 'main') -> None:
-    """Display Fairness Factor logo with context-specific styling"""
+def load_css():
+    """Load CSS styles"""
+    with open('static/styles.css') as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+def display_logo(context: str = 'main'):
+    """Display logo with context-specific styling"""
     logo_path = os.path.join('assets', 'FairnessFactorLogo.png')
     if os.path.exists(logo_path):
         with open(logo_path, "rb") as f:
@@ -73,9 +93,12 @@ async def handle_login(email: str, password: str) -> bool:
             st.error("Please use your Fairness Factor email address")
             return False
 
-        token = await st.session_state.auth_handler.login(email, password)
+        loop = asyncio.get_event_loop()
+        token = await loop.run_in_executor(None, lambda: st.session_state.auth_handler.login(email, password))
         if token:
             st.session_state.user_token = token
+            st.session_state.authenticated = True
+            
             # Get user info and store in session state
             user_info = await st.session_state.auth_handler.verify_token(token)
             if user_info:
@@ -93,8 +116,54 @@ async def handle_login(email: str, password: str) -> bool:
                 return True
         return False
     except Exception as e:
-        logger.error(f"Login error: {str(e)}")
+        logger.error(f"Login error for {email}: {str(e)}")
         return False
+
+async def handle_logout():
+    """Handle user logout"""
+    try:
+        if st.session_state.session_id:
+            await st.session_state.session_manager.end_session(
+                st.session_state.session_id
+            )
+        
+        # Log logout activity
+        if st.session_state.user:
+            await st.session_state.db_handlers['analytics'].log_activity(
+                st.session_state.user['email'],
+                'logout',
+                {'session_id': st.session_state.session_id}
+            )
+        
+        # Clear session state
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+            
+        initialize_session_state()
+        
+    except Exception as e:
+        logger.error(f"Logout error: {str(e)}")
+
+async def login_page():
+    """Display login page"""
+    st.title("Fairness Factor Blog Generator")
+    
+    # Center the login form
+    col1, col2, col3 = st.columns([1,2,1])
+    
+    with col2:
+        display_logo('login')
+        with st.form("login_form"):
+            email = st.text_input("Email", placeholder="example@fairnessfactor.com")
+            password = st.text_input("Password", type="password")
+            submitted = st.form_submit_button("Sign In")
+            
+            if submitted:
+                if await handle_login(email, password):
+                    st.success("Login successful!")
+                    st.experimental_rerun()
+                else:
+                    st.error("Invalid credentials")
 
 class AppState:
     """Application state management"""
@@ -123,7 +192,7 @@ class AppState:
                 logger.error(f"Initialization error: {str(e)}")
                 raise
 
-async def run_app():
+async def main_app():
     """Main application runner"""
     # Initialize session state
     initialize_session_state()
@@ -140,106 +209,115 @@ async def run_app():
     )
 
     # Load styling
-    load_css('static/styles.css')
+    load_css()
 
-    # Authentication flow
-    if not st.session_state.user_token:
-        display_logo('login')
-        with st.form("login_form"):
-            email = st.text_input("Email", placeholder="example@fairnessfactor.com")
-            password = st.text_input("Password", type="password")
-            if st.form_submit_button("Sign In"):
-                success = await handle_login(email, password)
-                if success:
-                    st.experimental_rerun()
-    else:
-        # Verify existing session
-        user = await st.session_state.auth_handler.verify_token(st.session_state.user_token)
-        if not user:
-            # Clear session state if token is invalid
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            initialize_session_state()
+    # Authentication check
+    if not st.session_state.authenticated:
+        await login_page()
+        return
+        
+    # Verify authentication
+    if not await check_authentication():
+        await handle_logout()
+        st.experimental_rerun()
+        return
+    
+    # Main application UI
+    display_logo('main')
+    
+    # Sidebar navigation
+    with st.sidebar:
+        st.write(f"Welcome, {st.session_state.user['name']}")
+        
+        # Navigation menu
+        pages = [
+            'Topic Research',
+            'Topic Campaign',
+            'Article Draft',
+            'Editing Criteria',
+            'Final Article',
+            'Image Description',
+            'SEO Generation'
+        ]
+        
+        # Add User Management for admin users
+        if st.session_state.user.get('role') == 'admin':
+            pages.append('User Management')
+        
+        selected_page = st.radio("Navigation", pages)
+        
+        # Logout button
+        if st.button("Sign Out"):
+            await handle_logout()
             st.experimental_rerun()
-        else:
-            st.session_state.user = user
+            return
+    
+    # Update current page
+    st.session_state.current_page = selected_page
+    
+    # Page routing
+    try:
+        if selected_page == 'User Management':
+            if st.session_state.user.get('role') == 'admin':
+                await user_management_page(
+                    st.session_state.db_handlers,
+                    st.session_state.auth_handler
+                )
+            else:
+                st.error("Access denied")
+        elif selected_page == 'Topic Research':
+            await topic_research_page(
+                st.session_state.db_handlers,
+                st.session_state.llm_client,
+                st.session_state.prompt_handler
+            )
+        elif selected_page == 'Topic Campaign':
+            await topic_campaign_page(
+                st.session_state.db_handlers,
+                st.session_state.llm_client,
+                st.session_state.prompt_handler
+            )
+        elif selected_page == 'Article Draft':
+            await article_draft_page(
+                st.session_state.db_handlers,
+                st.session_state.llm_client,
+                st.session_state.prompt_handler
+            )
+        elif selected_page == 'Editing Criteria':
+            await editing_criteria_page(
+                st.session_state.db_handlers,
+                st.session_state.llm_client,
+                st.session_state.prompt_handler
+            )
+        elif selected_page == 'Final Article':
+            await final_article_page(
+                st.session_state.db_handlers,
+                st.session_state.llm_client,
+                st.session_state.prompt_handler
+            )
+        elif selected_page == 'Image Description':
+            await image_description_page(
+                st.session_state.db_handlers,
+                st.session_state.llm_client,
+                st.session_state.prompt_handler
+            )
+        elif selected_page == 'SEO Generation':
+            await seo_generation_page(
+                st.session_state.db_handlers,
+                st.session_state.llm_client,
+                st.session_state.prompt_handler
+            )
             
-            # Main application UI
-            display_logo('main')
-            
-            # Sidebar navigation
-            with st.sidebar:
-                st.write(f"Welcome, {user['name']}")
-                if st.button("Sign Out"):
-                    if st.session_state.session_id:
-                        await st.session_state.session_manager.end_session(
-                            st.session_state.session_id
-                        )
-                    for key in list(st.session_state.keys()):
-                        del st.session_state[key]
-                    initialize_session_state()
-                    st.experimental_rerun()
-
-                pages = [
-                    'Topic Research',
-                    'Topic Campaign',
-                    'Article Draft',
-                    'Editing Criteria',
-                    'Final Article',
-                    'Image Description',
-                    'SEO Generation'
-                ]
-                
-                page = st.radio("Navigation", pages)
-
-            # Page routing
-            try:
-                if page == 'Topic Research':
-                    await topic_research_page(
-                        st.session_state.db_handlers,
-                        st.session_state.llm_client,
-                        st.session_state.prompt_handler
-                    )
-                elif page == 'Topic Campaign':
-                    await topic_campaign_page(
-                        st.session_state.db_handlers,
-                        st.session_state.llm_client,
-                        st.session_state.prompt_handler
-                    )
-                elif page == 'Article Draft':
-                    await article_draft_page(
-                        st.session_state.db_handlers,
-                        st.session_state.llm_client,
-                        st.session_state.prompt_handler
-                    )
-                elif page == 'Editing Criteria':
-                    await editing_criteria_page(
-                        st.session_state.db_handlers,
-                        st.session_state.llm_client,
-                        st.session_state.prompt_handler
-                    )
-                elif page == 'Final Article':
-                    await final_article_page(
-                        st.session_state.db_handlers,
-                        st.session_state.llm_client,
-                        st.session_state.prompt_handler
-                    )
-                elif page == 'Image Description':
-                    await image_description_page(
-                        st.session_state.db_handlers,
-                        st.session_state.llm_client,
-                        st.session_state.prompt_handler
-                    )
-                elif page == 'SEO Generation':
-                    await seo_generation_page(
-                        st.session_state.db_handlers,
-                        st.session_state.llm_client,
-                        st.session_state.prompt_handler
-                    )
-                
-            except Exception as e:
-                logger.error(f"Page error: {str(e)}")
-                st.error(f"An error occurred: {str(e)}")
+        # Log page access
+        await st.session_state.db_handlers['analytics'].log_activity(
+            st.session_state.user['email'],
+            'page_access',
+            {'page': selected_page}
+        )
+        
+    except Exception as e:
+        logger.error(f"Page error: {str(e)}")
+        st.error(f"An error occurred: {str(e)}")
 
 def main():
     """Application entry point"""
@@ -253,7 +331,7 @@ def main():
 
     try:
         # Run the application
-        loop.run_until_complete(run_app())
+        loop.run_until_complete(main_app())
     except Exception as e:
         logger.error(f"Application error: {str(e)}")
         st.error("An unexpected error occurred")
