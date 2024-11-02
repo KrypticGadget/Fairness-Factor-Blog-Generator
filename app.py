@@ -224,15 +224,7 @@ async def main():
                         )
                         if success:
                             st.experimental_rerun()
-
         st.stop()
-
-    # Rest of your existing main() function code...
-    [Previous main function code continues unchanged...]
-
-if __name__ == "__main__":
-    # Validate configuration and check database before running the app
-    asyncio.run(main())
 
     # Verify token and get user info
     user = await st.session_state.auth_handler.verify_token(st.session_state.user_token)
