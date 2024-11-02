@@ -14,4 +14,7 @@ python-multipart==0.0.6
 watchdog==3.0.0
 python-docx==1.0.1
 PyPDF2==3.0.1
-motor==3.3.2  # Adding motor for async MongoDB support
+docx2txt2==1.0.4
+Pillow==10.0.0
+pyyaml==6.0.1
+nest_asyncio==1.6.0

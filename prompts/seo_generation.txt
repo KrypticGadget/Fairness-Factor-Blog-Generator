@@ -1,0 +1,43 @@
+Generate SEO optimization content for:
+
+Article Content:
+{article_content}
+
+Image Description:
+{image_description}
+
+Target Keywords:
+{target_keywords}
+
+Provide comprehensive SEO elements:
+1. Meta Information
+   - Title (50-60 characters)
+   - Description (150-160 characters)
+   - URL slug
+   - Canonical URL
+
+2. Keyword Analysis
+   - Primary keyword placement
+   - Secondary keywords
+   - Long-tail variations
+   - LSI keywords
+
+3. Content Optimization
+   - Heading hierarchy
+   - Keyword density
+   - Internal linking
+   - External linking
+
+4. Schema Markup
+   - Article schema
+   - Organization schema
+   - Author schema
+   - FAQ schema (if applicable)
+
+5. Technical SEO
+   - Mobile optimization
+   - Page speed considerations
+   - Image alt text
+   - Meta robots tags
+
+Format response as JSON with clear sections for each element.

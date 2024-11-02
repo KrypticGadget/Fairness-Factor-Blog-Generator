@@ -1,0 +1,25 @@
+You are analyzing research documents for Fairness Factor's blog content.
+
+Research Documents:
+{documents}
+
+Please provide a comprehensive analysis focusing on:
+1. Key themes and patterns
+2. Employee advocacy opportunities
+3. Workplace challenges identified
+4. Potential solutions and approaches
+5. Relevant statistics and data points
+6. Industry trends
+7. Legal considerations
+8. Employee impact stories
+
+Format your analysis with clear sections and highlight actionable insights that align with Fairness Factor's mission of employee advocacy.
+
+Consider:
+- Current workplace issues
+- Employee rights and protections
+- Legal precedents and regulations
+- Industry best practices
+- Success stories and case studies
+
+Your analysis should help inform compelling blog content that demonstrates Fairness Factor's expertise in employee advocacy.

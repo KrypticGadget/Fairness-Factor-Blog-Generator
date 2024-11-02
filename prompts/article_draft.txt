@@ -1,0 +1,31 @@
+Create a comprehensive blog article draft based on:
+
+Topic: {selected_topic}
+
+Article Structure:
+{article_structure}
+
+Research Analysis:
+{research_analysis}
+
+Guidelines:
+1. Maintain professional yet approachable tone
+2. Include relevant statistics and examples
+3. Highlight Fairness Factor's expertise
+4. Address common employee concerns
+5. Provide actionable insights
+6. Include expert perspectives
+7. Reference legal considerations
+8. End with clear call-to-action
+
+Key Elements:
+- Engaging introduction
+- Clear problem statement
+- Fairness Factor's unique approach
+- Benefits for employees and employers
+- Real-world examples
+- Practical solutions
+- Expert insights
+- Conclusion with next steps
+
+Ensure content demonstrates Fairness Factor's commitment to employee advocacy while maintaining readability and engagement.

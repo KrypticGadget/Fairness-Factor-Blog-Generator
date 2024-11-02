@@ -1,0 +1,29 @@
+Generate the final version of the article incorporating:
+
+Original Draft:
+{article_draft}
+
+Editing Suggestions:
+{editing_suggestions}
+
+Additional Feedback:
+{user_feedback}
+
+Focus on:
+1. Implementing all approved edits
+2. Maintaining consistent voice
+3. Enhancing readability
+4. Strengthening arguments
+5. Polishing transitions
+6. Optimizing structure
+7. Reinforcing key messages
+8. Perfecting call-to-action
+
+Ensure the final article:
+- Demonstrates expertise
+- Engages target audience
+- Provides clear value
+- Maintains professional tone
+- Reflects brand voice
+- Drives desired action
+- Supports SEO goals

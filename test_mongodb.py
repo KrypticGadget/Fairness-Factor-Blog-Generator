@@ -1,20 +1,23 @@
-# E:\Kryptic Gadget Github Repos\Fairness-Factor-Blog-Generator\test_mongodb.py
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
-from config import Config
 import logging
+from dotenv import load_dotenv
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def test_connection():
-    client = None
+    """Test MongoDB connection"""
     try:
-        # Validate config
-        Config.validate()
+        load_dotenv()
+        uri = os.getenv('MONGODB_URI')
         
-        # Create client
-        client = AsyncIOMotorClient(Config.MONGODB_URI)
+        if not uri:
+            logger.error("MongoDB URI not found in environment variables")
+            return False
+            
+        client = AsyncIOMotorClient(uri)
         
         # Test connection
         await client.admin.command('ping')
@@ -30,11 +33,13 @@ async def test_connection():
         return True
         
     except Exception as e:
-        logger.error(f"❌ Error connecting to MongoDB: {str(e)}")
+        logger.error(f"❌ Connection error: {str(e)}")
         return False
+    
     finally:
-        if client:
+        if 'client' in locals():
             client.close()
 
+# For direct script execution
 if __name__ == "__main__":
     asyncio.run(test_connection())

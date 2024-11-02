@@ -1,0 +1,37 @@
+Review and provide editing suggestions for the following article:
+
+Article Draft:
+{article_draft}
+
+Editing Criteria:
+{editing_criteria}
+
+Section-Specific Feedback:
+{section_feedback}
+
+Provide detailed suggestions for:
+1. Content Enhancement
+   - Clarity and coherence
+   - Supporting evidence
+   - Example effectiveness
+   - Argument strength
+
+2. Style Improvements
+   - Tone consistency
+   - Brand voice alignment
+   - Language accessibility
+   - Professional polish
+
+3. Structure Optimization
+   - Flow and transitions
+   - Section balance
+   - Information hierarchy
+   - Logical progression
+
+4. Engagement Elements
+   - Reader engagement
+   - Call-to-action effectiveness
+   - Value proposition clarity
+   - Emotional connection
+
+Format suggestions with specific examples and recommended changes for each section.

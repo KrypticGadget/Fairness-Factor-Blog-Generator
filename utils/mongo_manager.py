@@ -29,7 +29,14 @@ class AsyncMongoManager:
         self.client = None
         self.db = None
         self.fs = None
-        asyncio.create_task(self._connect())
+        
+        # Remove this line
+        # asyncio.create_task(self._connect())
+        
+        # Instead, initialize connection in an async context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self._connect())
 
     async def _connect(self) -> None:
         """Establish async connection to MongoDB"""

@@ -1,8 +1,9 @@
 # utils/session_manager.py
 from datetime import datetime
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List  # Add List to the imports
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from bson import ObjectId  # Add this import for ObjectId
 
 logger = logging.getLogger(__name__)
 

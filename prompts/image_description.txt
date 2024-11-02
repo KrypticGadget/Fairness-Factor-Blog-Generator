@@ -1,0 +1,40 @@
+Generate image descriptions based on:
+
+Article Content:
+{article_content}
+
+Image Type:
+{image_type}
+
+Style Preference:
+{style_preference}
+
+Additional Notes:
+{additional_notes}
+
+Provide detailed descriptions including:
+1. Visual Elements
+   - Composition
+   - Color scheme
+   - Lighting
+   - Focal points
+
+2. Subject Matter
+   - Main elements
+   - People representation
+   - Setting/environment
+   - Props/objects
+
+3. Emotional Impact
+   - Mood/atmosphere
+   - Brand alignment
+   - Message reinforcement
+   - Viewer connection
+
+4. Technical Specifications
+   - Dimensions
+   - Resolution
+   - Format requirements
+   - Usage considerations
+
+Ensure descriptions align with Fairness Factor's professional image while supporting the article's message.

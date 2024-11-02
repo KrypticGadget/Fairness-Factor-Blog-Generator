@@ -1,0 +1,22 @@
+Based on the following research analysis:
+
+{research_analysis}
+
+Generate a strategic content campaign that:
+1. Identifies 5-7 compelling blog topics
+2. Prioritizes topics by relevance and impact
+3. Suggests angles for each topic
+4. Identifies target audience segments
+5. Outlines potential calls-to-action
+
+For each topic, include:
+- Working title
+- Key message
+- Target audience
+- Main pain points addressed
+- Unique value proposition
+- Supporting data points
+- Potential expert quotes/insights
+- Call-to-action suggestions
+
+Ensure all topics align with Fairness Factor's mission of employee advocacy and workplace fairness.
