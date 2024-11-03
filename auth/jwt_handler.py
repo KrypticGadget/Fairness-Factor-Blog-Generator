@@ -3,17 +3,17 @@ import jwt
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 import logging
-from config import settings
+from config import get_settings
 
 logger = logging.getLogger(__name__)
 
 class JWTHandler:
     def __init__(self, db):
         self.db = db
-        self.access_secret = settings.security.JWT_SECRET_KEY
-        self.refresh_secret = settings.security.JWT_REFRESH_SECRET
-        self.access_expire_minutes = settings.security.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
-        self.refresh_expire_days = settings.security.JWT_REFRESH_TOKEN_EXPIRE_DAYS
+        self.access_secret = get_settings().JWT_SECRET_KEY
+        self.refresh_secret = get_settings().JWT_REFRESH_SECRET
+        self.access_expire_minutes = get_settings().JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        self.refresh_expire_days = get_settings().JWT_REFRESH_TOKEN_EXPIRE_DAYS
 
     async def create_access_token(self, user: Dict[str, Any]) -> str:
         """Create JWT access token"""

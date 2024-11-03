@@ -6,7 +6,7 @@ from datetime import datetime
 import logging
 from typing import Optional, Dict, Any
 from config import get_settings
-from database.mongo_manager import get_db_session
+from database.mongo_manager import AsyncDatabaseSession
 from auth.authenticator import AsyncAuthenticator
 from security.rate_limiter import RateLimiter
 from security.audit_log import AuditLogger
@@ -77,7 +77,7 @@ class FairnessFactor:
         """Initialize database and security handlers"""
         try:
             # Get database session
-            db_session = get_db_session()
+            db_session = AsyncDatabaseSession()
             client, db = await db_session.__aenter__()
             
             # Initialize handlers

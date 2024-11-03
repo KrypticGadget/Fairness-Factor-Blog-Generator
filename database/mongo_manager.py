@@ -3,7 +3,7 @@ import motor.motor_asyncio
 import asyncio
 from typing import Optional, Tuple, Any
 import logging
-from config import settings
+from config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class AsyncMongoManager:
 
     def __init__(self):
         if not hasattr(self, 'initialized'):
-            self.uri = settings.database.MONGODB_URI
+            self.uri = get_settings().MONGODB_URI
             self.client = None
             self.db = None
             self.initialized = False
@@ -29,12 +29,12 @@ class AsyncMongoManager:
                 # Create client
                 self.client = motor.motor_asyncio.AsyncIOMotorClient(
                     self.uri,
-                    maxPoolSize=settings.database.MAX_CONNECTIONS,
-                    minPoolSize=settings.database.MIN_CONNECTIONS
+                    maxPoolSize=get_settings().MAX_CONNECTIONS,
+                    minPoolSize=get_settings().MIN_CONNECTIONS
                 )
                 
                 # Get database
-                self.db = self.client[settings.database.DATABASE_NAME]
+                self.db = self.client[get_settings().DATABASE_NAME]
                 
                 # Test connection
                 await self.client.admin.command('ping')
