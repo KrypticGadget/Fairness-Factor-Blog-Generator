@@ -1,45 +1,28 @@
+from pydantic_settings import BaseSettings
+from functools import lru_cache
 import os
-from typing import Optional
 from dotenv import load_dotenv
-from pydantic import BaseModel
-import streamlit as st
 
-# Load environment variables from .env file
 load_dotenv()
 
-class Settings(BaseModel):
-    MONGODB_URI: str
-    JWT_SECRET_KEY: str
-    ANTHROPIC_API_KEY: str
-    APP_NAME: str = "Fairness Factor Blog Generator"
-    APP_DOMAIN: str = "fairnessfactor.com"
-    ADMIN_EMAIL: str = "admin@fairnessfactor.com"
+class Settings(BaseSettings):
+    # Required settings with defaults for development
+    MONGODB_URI: str = "mongodb://localhost:27017"
+    JWT_SECRET_KEY: str = "development_secret_key"
+    ANTHROPIC_API_KEY: str = "default_key"
+    
+    # Optional settings
+    ENVIRONMENT: str = "development"
+    DEBUG: bool = True
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
 
-    @classmethod
-    def from_env(cls) -> "Settings":
-        """Create settings from environment variables"""
-        env_vars = {}
-        for field in cls.model_fields.keys():
-            # Try Streamlit secrets first
-            try:
-                value = st.secrets[field]
-            except:
-                # Fall back to environment variables
-                value = os.getenv(field)
-            
-            if value is not None:
-                env_vars[field] = value
-
-        return cls(**env_vars)
-
-    def validate(self):
-        """Validate all required configuration is present"""
-        missing = []
-        for field in ["MONGODB_URI", "JWT_SECRET_KEY", "ANTHROPIC_API_KEY"]:
-            if not getattr(self, field):
-                missing.append(field)
-        if missing:
-            raise ValueError(f"Missing required configuration: {', '.join(missing)}")
+@lru_cache()
+def get_settings() -> Settings:
+    """Cache and return settings instance"""
+    return Settings()
 
 # Create settings instance
-settings = Settings.from_env()
+settings = get_settings()
