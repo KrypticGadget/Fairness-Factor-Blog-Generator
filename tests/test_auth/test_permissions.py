@@ -32,3 +32,19 @@ async def test_permission_checks(permission_handler):
     # Check removed permission
     has_permission = await permission_handler.check_permission('user_id', 'test:permission')
     assert has_permission is False
+
+@pytest.mark.asyncio
+async def test_check_permission(permission_handler):
+    # Add test permission
+    await permission_handler.add_permission('user_id', 'test:permission')
+    
+    # Check permission
+    has_permission = await permission_handler.check_permission('user_id', 'test:permission')
+    assert has_permission is True
+    
+    # Remove permission
+    await permission_handler.remove_permission('user_id', 'test:permission')
+    
+    # Check removed permission
+    has_permission = await permission_handler.check_permission('user_id', 'test:permission')
+    assert has_permission is False

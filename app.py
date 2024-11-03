@@ -86,11 +86,9 @@ class FairnessFactor:
                 'analytics': AsyncAnalyticsHandler(db),
                 'rate_limiter': RateLimiter(db),
                 'audit': AuditLogger(db),
-                'session': AsyncSessionManager(db)
+                'session': AsyncSessionManager(db),
+                'encryption': EncryptionHandler()
             }
-            
-            # Initialize encryption
-            st.session_state.encryption = EncryptionHandler()
             
             st.session_state.db_session = db_session
             return True
