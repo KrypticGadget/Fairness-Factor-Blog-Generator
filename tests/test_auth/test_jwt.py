@@ -27,6 +27,54 @@ async def test_create_access_token(jwt_handler):
     assert payload['type'] == 'access'
 
 @pytest.mark.asyncio
+async def test_create_refresh_token(jwt_handler):
+    user = {
+        '_id': '123',
+        'email': 'test@fairnessfactor.com',
+        'role': 'user'
+    }
+    
+    token = await jwt_handler.create_refresh_token(user)
+    assert token is not None
+    
+    # Verify token
+    payload = await jwt_handler.verify_refresh_token(token)
+    assert payload is not None
+    assert payload['user_id'] == '123'
+    assert payload['type'] == 'refresh'
+
+@pytest.mark.asyncio
+async def test_verify_access_token(jwt_handler):
+    user = {
+        '_id': '123',
+        'email': 'test@fairnessfactor.com',
+        'role': 'user'
+    }
+    
+    token = await jwt_handler.create_access_token(user)
+    payload = await jwt_handler.verify_access_token(token)
+    
+    assert payload is not None
+    assert payload['user_id'] == '123'
+    assert payload['email'] == 'test@fairnessfactor.com'
+    assert payload['type'] == 'access'
+
+@pytest.mark.asyncio
+async def test_verify_refresh_token(jwt_handler):
+    user = {
+        '_id': '123',
+        'email': 'test@fairnessfactor.com',
+        'role': 'user'
+    }
+    
+    token = await jwt_handler.create_refresh_token(user)
+    payload = await jwt_handler.verify_refresh_token(token)
+    
+    assert payload is not None
+    assert payload['user_id'] == '123'
+    assert payload['type'] == 'refresh'
+
+@pytest.mark.asyncio
 async def test_token_expiration(jwt_handler):
     user = {
         '_id': '123',

@@ -59,3 +59,19 @@ class AsyncAuthenticator:
     async def verify_permission(self, user_id: str, permission: str) -> bool:
         """Check if user has specific permission"""
         return await self.permissions.check_permission(user_id, permission)
+        
+    async def verify_access(self, user_role: str, application: str) -> bool:
+        """Check user role and application access"""
+        try:
+            # Check user role
+            if user_role == 'admin':
+                return True
+            elif user_role == 'content_writer' and application in ['Blog Generator', 'Social Media Scheduler', 'Reddit Monitoring']:
+                return True
+            elif user_role == 'viewer' and application == 'Blog Generator':
+                return True
+            else:
+                return False
+        except Exception as e:
+            logger.error(f"Access verification error: {str(e)}")
+            return False
