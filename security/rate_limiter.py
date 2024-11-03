@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 from typing import Optional, Dict
 import logging
-from config import settings
+from config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +10,8 @@ class RateLimiter:
     def __init__(self, db):
         self.db = db
         self.collection = db.rate_limits
-        self.max_requests = settings.security.RATE_LIMIT_REQUESTS
-        self.period = settings.security.RATE_LIMIT_PERIOD
+        self.max_requests = get_settings().RATE_LIMIT_REQUESTS
+        self.period = get_settings().RATE_LIMIT_PERIOD
 
     async def is_rate_limited(self, key: str) -> bool:
         """Check if request should be rate limited"""
