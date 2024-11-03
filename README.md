@@ -185,9 +185,24 @@ For support, email support@fairnessfactor.com or create an issue.
 
 Check [CHANGELOG.md](CHANGELOG.md) for version history.
 
-```
+## Environment Setup
 
-This updated structure implements a comprehensive authentication system while maintaining the existing functionality of the Blog Generator App. The changes focus on security, scalability, and maintainability while providing clear documentation for users and developers.
+1. Copy `.env.example` to `.env`
+2. Fill in required variables:
+   - MONGODB_URI
+   - JWT_SECRET_KEY
+   - ANTHROPIC_API_KEY
+3. Set appropriate development/production values
+4. Validate environment setup
 
-Would you like me to provide more detailed information about any specific aspect of the updated project structure?
+## Configuration Guide
 
+1. Streamlit Configuration
+   - CORS and XSRF settings
+   - Server configuration
+   - Security settings
+
+2. Application Settings
+   - Environment variables
+   - API configurations
+   - Security settings

@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 import logging
 from typing import Optional, Dict, Any
-from config import settings
+from config import get_settings
 from database.mongo_manager import get_db_session
 from auth.authenticator import AsyncAuthenticator
 from security.rate_limiter import RateLimiter
@@ -38,6 +38,7 @@ class FairnessFactor:
         self.initialize_state()
         self.setup_config()
         self.load_apps()
+        self.settings = get_settings()
 
     def initialize_state(self):
         """Initialize session state variables"""
