@@ -1,0 +1,28 @@
+# config.yml
+
+credentials:
+  usernames:
+    zack:
+      email: zack@fairnessfactor.com
+      name: Zack
+      password: $2b$12$Y9nVHZxKNAZ0zbrdCCvhkeLqME1O3C9CxgyTHm7Vj1sUZvSGgHqvK
+      role: admin
+    mike:
+      email: mike@fairnessfactor.com
+      name: Mike
+      password: $2b$12$rIHxz0G5YzKZ9HqZVVHw9.l6t3Ye5YWLYwuZJLKn4y.M3q.Q5q8yW
+      role: content_writer
+    sarah:
+      email: sarah@fairnessfactor.com
+      name: Sarah
+      password: $2b$12$P4jF9q8L5X5QZ5k3v6Y3u.L6t3Ye5YWLYwuZJLKn4y.M3q.Q5q8yW
+      role: content_writer
+
+cookie:
+  expiry_days: 30
+  key: "fairness-factor-internal-tools-2024"
+  name: fairness_factor_auth
+
+preauthorized:
+  emails:
+    - team@fairnessfactor.com

@@ -5,338 +5,275 @@ import os
 from datetime import datetime
 import logging
 from typing import Optional, Dict, Any
-import base64
-from config import Config
-from utils.auth import AsyncAuthHandler
-from utils.mongo_manager import AsyncMongoManager, get_db_session
-from utils.data_handlers import (
-    AsyncBlogContentHandler,
-    AsyncFileHandler, 
-    AsyncAnalyticsHandler
-)
-from utils.prompt_handler import AsyncPromptHandler
+from config import settings
+from database.mongo_manager import get_db_session
+from auth.authenticator import AsyncAuthenticator
+from security.rate_limiter import RateLimiter
+from security.audit_log import AuditLogger
+from security.encryption import EncryptionHandler
+from utils.data_handlers import AsyncBlogContentHandler, AsyncAnalyticsHandler
 from utils.session_manager import AsyncSessionManager
-from llm.llm_client import AsyncLLMClient
 
-# Import page modules
-from pages.topic_research import topic_research_page
-from pages.topic_campaign import topic_campaign_page
-from pages.article_draft import article_draft_page
-from pages.editing_criteria import editing_criteria_page
-from pages.final_article import final_article_page
-from pages.image_description import image_description_page
-from pages.seo_generation import seo_generation_page
-from pages.user_management import user_management_page
+# Import applications
+from apps.blog_generator import BlogGeneratorApp
+from apps.social_media_scheduler import SocialMediaSchedulerApp
+from apps.reddit_monitoring import RedditMonitoringApp
+from apps.user_management import UserManagementApp
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('logs/app.log'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
-def initialize_session_state():
-    """Initialize session state variables"""
-    if 'initialized' not in st.session_state:
-        st.session_state.initialized = False
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-    if 'user' not in st.session_state:
-        st.session_state.user = None
-    if 'user_token' not in st.session_state:
-        st.session_state.user_token = None
-    if 'session_id' not in st.session_state:
-        st.session_state.session_id = None
-    if 'current_page' not in st.session_state:
-        st.session_state.current_page = "Login"
-    if 'page_history' not in st.session_state:
-        st.session_state.page_history = []
+class FairnessFactor:
+    """Main application class for Fairness Factor Internal Tools"""
+    
+    def __init__(self):
+        self.initialize_state()
+        self.setup_config()
+        self.load_apps()
 
-async def check_authentication():
-    """Check if user is authenticated and verify token"""
-    if not st.session_state.authenticated:
-        return False
+    def initialize_state(self):
+        """Initialize session state variables"""
+        state_vars = {
+            'authenticated': False,
+            'user': None,
+            'current_app': None,
+            'db_session': None,
+            'handlers': {},
+            'encryption': None
+        }
         
-    if st.session_state.user_token:
-        user = await st.session_state.auth_handler.verify_token(st.session_state.user_token)
-        if user:
-            st.session_state.user = user
+        for var, value in state_vars.items():
+            if var not in st.session_state:
+                st.session_state[var] = value
+
+    def setup_config(self):
+        """Configure Streamlit page settings"""
+        st.set_page_config(
+            page_title="Fairness Factor Internal Tools",
+            page_icon="⚖️",
+            layout="wide",
+            initial_sidebar_state="expanded"
+        )
+
+    def load_apps(self):
+        """Initialize available applications"""
+        self.apps = {
+            'Blog Generator': BlogGeneratorApp(),
+            'Social Media Scheduler': SocialMediaSchedulerApp(),
+            'Reddit Monitoring': RedditMonitoringApp(),
+            'User Management': UserManagementApp()
+        }
+
+    async def initialize_handlers(self):
+        """Initialize database and security handlers"""
+        try:
+            # Get database session
+            db_session = get_db_session()
+            client, db = await db_session.__aenter__()
+            
+            # Initialize handlers
+            st.session_state.handlers = {
+                'auth': AsyncAuthenticator(db),
+                'blog': AsyncBlogContentHandler(db),
+                'analytics': AsyncAnalyticsHandler(db),
+                'rate_limiter': RateLimiter(db),
+                'audit': AuditLogger(db),
+                'session': AsyncSessionManager(db)
+            }
+            
+            # Initialize encryption
+            st.session_state.encryption = EncryptionHandler()
+            
+            st.session_state.db_session = db_session
             return True
             
-    # Clear session state if authentication fails
-    st.session_state.authenticated = False
-    st.session_state.user = None
-    st.session_state.user_token = None
-    return False
-
-def load_css():
-    """Load CSS styles"""
-    with open('static/styles.css') as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-
-def display_logo(context: str = 'main'):
-    """Display logo with context-specific styling"""
-    logo_path = os.path.join('assets', 'FairnessFactorLogo.png')
-    if os.path.exists(logo_path):
-        with open(logo_path, "rb") as f:
-            logo_data = base64.b64encode(f.read()).decode()
-            container_class = 'logo-container-login' if context == 'login' else 'logo-container-main'
-            st.markdown(f"""
-                <div class="{container_class}">
-                    <img src="data:image/png;base64,{logo_data}" alt="Fairness Factor Logo"/>
-                </div>
-            """, unsafe_allow_html=True)
-    else:
-        logger.warning("Logo file not found")
-
-async def handle_login(email: str, password: str) -> bool:
-    """Handle user login"""
-    try:
-        if not await st.session_state.auth_handler.verify_email_domain(email):
-            st.error("Please use your Fairness Factor email address")
+        except Exception as e:
+            logger.error(f"Failed to initialize handlers: {str(e)}")
             return False
 
-        loop = asyncio.get_event_loop()
-        token = await loop.run_in_executor(None, lambda: st.session_state.auth_handler.login(email, password))
-        if token:
-            st.session_state.user_token = token
-            st.session_state.authenticated = True
-            
-            # Get user info and store in session state
-            user_info = await st.session_state.auth_handler.verify_token(token)
-            if user_info:
-                st.session_state.user = user_info
-                session_id = await st.session_state.session_manager.create_session(
-                    email,
-                    {'login_time': datetime.now().isoformat()}
-                )
-                st.session_state.session_id = session_id
-                await st.session_state.db_handlers['analytics'].log_activity(
-                    email,
-                    'login',
-                    {'success': True, 'session_id': session_id}
-                )
-                return True
-        return False
-    except Exception as e:
-        logger.error(f"Login error for {email}: {str(e)}")
-        return False
-
-async def handle_logout():
-    """Handle user logout"""
-    try:
-        if st.session_state.session_id:
-            await st.session_state.session_manager.end_session(
-                st.session_state.session_id
-            )
+    def render_login(self):
+        """Render login page"""
+        st.title("Fairness Factor Internal Tools")
         
-        # Log logout activity
-        if st.session_state.user:
-            await st.session_state.db_handlers['analytics'].log_activity(
-                st.session_state.user['email'],
-                'logout',
-                {'session_id': st.session_state.session_id}
-            )
+        if os.path.exists('static/logo.png'):
+            st.image('static/logo.png', width=200)
         
-        # Clear session state
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-            
-        initialize_session_state()
-        
-    except Exception as e:
-        logger.error(f"Logout error: {str(e)}")
-
-async def login_page():
-    """Display login page"""
-    st.title("Fairness Factor Blog Generator")
-    
-    # Center the login form
-    col1, col2, col3 = st.columns([1,2,1])
-    
-    with col2:
-        display_logo('login')
         with st.form("login_form"):
             email = st.text_input("Email", placeholder="example@fairnessfactor.com")
             password = st.text_input("Password", type="password")
-            submitted = st.form_submit_button("Sign In")
             
-            if submitted:
-                if await handle_login(email, password):
-                    st.success("Login successful!")
-                    st.experimental_rerun()
-                else:
-                    st.error("Invalid credentials")
+            if st.form_submit_button("Sign In"):
+                self.handle_login(email, password)
 
-class AppState:
-    """Application state management"""
-    def __init__(self):
-        self.initialized = False
-
-    async def initialize(self):
-        """Initialize application state"""
-        if not self.initialized:
-            try:
-                async with get_db_session() as (client, db, fs):
-                    if not st.session_state.get('initialized'):
-                        st.session_state.db_handlers = {
-                            'blog': AsyncBlogContentHandler(db),
-                            'file': AsyncFileHandler(fs),
-                            'analytics': AsyncAnalyticsHandler(db)
-                        }
-                        st.session_state.auth_handler = AsyncAuthHandler(db)
-                        st.session_state.session_manager = AsyncSessionManager(db)
-                        st.session_state.prompt_handler = AsyncPromptHandler(db)
-                        st.session_state.llm_client = AsyncLLMClient()
-                        st.session_state.initialized = True
-                
-                self.initialized = True
-            except Exception as e:
-                logger.error(f"Initialization error: {str(e)}")
-                raise
-
-async def main_app():
-    """Main application runner"""
-    # Initialize session state
-    initialize_session_state()
-    
-    app_state = AppState()
-    await app_state.initialize()
-
-    # Configure Streamlit page
-    st.set_page_config(
-        page_title="Fairness Factor Blog Generator",
-        page_icon="⚖️",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-
-    # Load styling
-    load_css()
-
-    # Authentication check
-    if not st.session_state.authenticated:
-        await login_page()
-        return
-        
-    # Verify authentication
-    if not await check_authentication():
-        await handle_logout()
-        st.experimental_rerun()
-        return
-    
-    # Main application UI
-    display_logo('main')
-    
-    # Sidebar navigation
-    with st.sidebar:
-        st.write(f"Welcome, {st.session_state.user['name']}")
-        
-        # Navigation menu
-        pages = [
-            'Topic Research',
-            'Topic Campaign',
-            'Article Draft',
-            'Editing Criteria',
-            'Final Article',
-            'Image Description',
-            'SEO Generation'
-        ]
-        
-        # Add User Management for admin users
-        if st.session_state.user.get('role') == 'admin':
-            pages.append('User Management')
-        
-        selected_page = st.radio("Navigation", pages)
-        
-        # Logout button
-        if st.button("Sign Out"):
-            await handle_logout()
-            st.experimental_rerun()
-            return
-    
-    # Update current page
-    st.session_state.current_page = selected_page
-    
-    # Page routing
-    try:
-        if selected_page == 'User Management':
-            if st.session_state.user.get('role') == 'admin':
-                await user_management_page(
-                    st.session_state.db_handlers,
-                    st.session_state.auth_handler
+    async def handle_login(self, email: str, password: str):
+        """Process login attempt"""
+        try:
+            # Check rate limiting
+            if await st.session_state.handlers['rate_limiter'].is_rate_limited(email):
+                st.error("Too many login attempts. Please try again later.")
+                return
+            
+            # Authenticate user
+            auth_result = await st.session_state.handlers['auth'].authenticate_user(email, password)
+            
+            if not auth_result:
+                st.error("Invalid credentials")
+                await st.session_state.handlers['audit'].log_event(
+                    email,
+                    'login_failed',
+                    {'reason': 'invalid_credentials'}
                 )
-            else:
-                st.error("Access denied")
-        elif selected_page == 'Topic Research':
-            await topic_research_page(
-                st.session_state.db_handlers,
-                st.session_state.llm_client,
-                st.session_state.prompt_handler
-            )
-        elif selected_page == 'Topic Campaign':
-            await topic_campaign_page(
-                st.session_state.db_handlers,
-                st.session_state.llm_client,
-                st.session_state.prompt_handler
-            )
-        elif selected_page == 'Article Draft':
-            await article_draft_page(
-                st.session_state.db_handlers,
-                st.session_state.llm_client,
-                st.session_state.prompt_handler
-            )
-        elif selected_page == 'Editing Criteria':
-            await editing_criteria_page(
-                st.session_state.db_handlers,
-                st.session_state.llm_client,
-                st.session_state.prompt_handler
-            )
-        elif selected_page == 'Final Article':
-            await final_article_page(
-                st.session_state.db_handlers,
-                st.session_state.llm_client,
-                st.session_state.prompt_handler
-            )
-        elif selected_page == 'Image Description':
-            await image_description_page(
-                st.session_state.db_handlers,
-                st.session_state.llm_client,
-                st.session_state.prompt_handler
-            )
-        elif selected_page == 'SEO Generation':
-            await seo_generation_page(
-                st.session_state.db_handlers,
-                st.session_state.llm_client,
-                st.session_state.prompt_handler
+                return
+            
+            if auth_result.get('requires_2fa'):
+                st.session_state['pending_2fa'] = True
+                st.session_state['temp_user_id'] = auth_result['user_id']
+                st.rerun()
+                return
+            
+            # Set session state
+            st.session_state.authenticated = True
+            st.session_state.user = auth_result['user']
+            
+            # Create session
+            session_id = await st.session_state.handlers['session'].create_session(
+                email,
+                {'login_time': datetime.utcnow().isoformat()}
             )
             
-        # Log page access
-        await st.session_state.db_handlers['analytics'].log_activity(
-            st.session_state.user['email'],
-            'page_access',
-            {'page': selected_page}
-        )
-        
-    except Exception as e:
-        logger.error(f"Page error: {str(e)}")
-        st.error(f"An error occurred: {str(e)}")
+            # Log successful login
+            await st.session_state.handlers['audit'].log_event(
+                email,
+                'login_successful',
+                {'session_id': session_id}
+            )
+            
+            st.success("Login successful!")
+            st.rerun()
+            
+        except Exception as e:
+            logger.error(f"Login error: {str(e)}")
+            st.error("An error occurred during login")
 
-def main():
-    """Application entry point"""
-    # Set up event loop policy for Windows
-    if os.name == 'nt':
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    def render_sidebar(self):
+        """Render application sidebar"""
+        with st.sidebar:
+            st.write(f"Welcome, {st.session_state.user['name']}")
+            st.write(f"Role: {st.session_state.user['role'].capitalize()}")
+            
+            # Get available apps based on user role
+            available_apps = self.get_available_apps(st.session_state.user['role'])
+            
+            # App selection
+            selected_app = st.selectbox(
+                "Select Application",
+                options=available_apps
+            )
+            
+            if selected_app != st.session_state.current_app:
+                st.session_state.current_app = selected_app
+                st.rerun()
+            
+            if st.button("Sign Out"):
+                self.handle_logout()
 
-    # Create and set event loop
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    def get_available_apps(self, role: str) -> list:
+        """Get list of available apps based on user role"""
+        role_apps = {
+            'admin': [
+                'Blog Generator',
+                'Social Media Scheduler',
+                'Reddit Monitoring',
+                'User Management'
+            ],
+            'content_writer': [
+                'Blog Generator',
+                'Social Media Scheduler',
+                'Reddit Monitoring'
+            ],
+            'viewer': [
+                'Blog Generator'
+            ]
+        }
+        return role_apps.get(role, ['Blog Generator'])
 
-    try:
-        # Run the application
-        loop.run_until_complete(main_app())
-    except Exception as e:
-        logger.error(f"Application error: {str(e)}")
-        st.error("An unexpected error occurred")
-    finally:
-        loop.close()
+    async def handle_logout(self):
+        """Process user logout"""
+        try:
+            if st.session_state.user:
+                # End session
+                await st.session_state.handlers['session'].end_session(
+                    st.session_state.user['email']
+                )
+                
+                # Log logout
+                await st.session_state.handlers['audit'].log_event(
+                    st.session_state.user['email'],
+                    'logout',
+                    {'timestamp': datetime.utcnow().isoformat()}
+                )
+            
+            # Clear session state
+            for key in list(st.session_state.keys()):
+                if key not in ['db_session', 'handlers', 'encryption']:
+                    del st.session_state[key]
+            
+            st.rerun()
+            
+        except Exception as e:
+            logger.error(f"Logout error: {str(e)}")
+            st.error("An error occurred during logout")
+
+    def render_app(self):
+        """Render selected application"""
+        try:
+            if st.session_state.current_app:
+                app = self.apps[st.session_state.current_app]
+                app.render(st.session_state.handlers)
+            else:
+                st.write("Please select an application from the sidebar.")
+                
+        except Exception as e:
+            logger.error(f"Error rendering app: {str(e)}")
+            st.error("An error occurred while loading the application")
+
+    def main(self):
+        """Main application entry point"""
+        try:
+            # Initialize handlers if needed
+            if not st.session_state.handlers:
+                asyncio.run(self.initialize_handlers())
+            
+            # Load CSS
+            with open('static/styles.css') as f:
+                st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+            
+            # Check authentication
+            if not st.session_state.authenticated:
+                self.render_login()
+                return
+            
+            # Render sidebar and main content
+            self.render_sidebar()
+            self.render_app()
+            
+        except Exception as e:
+            logger.error(f"Application error: {str(e)}")
+            st.error("An unexpected error occurred")
+            
+        finally:
+            # Cleanup if needed
+            if st.session_state.get('db_session'):
+                asyncio.run(st.session_state.db_session.__aexit__(None, None, None))
 
 if __name__ == "__main__":
-    main()
+    app = FairnessFactor()
+    app.main()

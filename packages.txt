@@ -1,0 +1,8 @@
+# packages.txt
+
+build-essential
+curl
+git
+python3-dev
+libpq-dev
+netcat

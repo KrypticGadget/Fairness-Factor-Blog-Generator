@@ -12,6 +12,7 @@ ENV/
 .env.local
 .env.*.local
 .streamlit/secrets.toml
+.streamlit/encryption.key
 
 # IDE configurations
 .idea/
@@ -35,3 +36,22 @@ htmlcov/
 
 # Logs
 *.log
+logs/*
+!logs/.gitkeep
+
+# Database
+*.db
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Build files
+build/
+dist/
+*.egg-info/
+
+# Documentation
+docs/_build/

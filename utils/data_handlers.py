@@ -1,11 +1,8 @@
 # utils/data_handlers.py
 from datetime import datetime
-from bson import ObjectId
-import logging
 from typing import Optional, List, Dict, Any
-import pandas as pd
-import io
-import asyncio
+import logging
+from bson import ObjectId
 
 logger = logging.getLogger(__name__)
 
@@ -14,108 +11,63 @@ class AsyncBlogContentHandler:
         self.db = db
         self.collection = db.blog_content
 
-    async def save_research(self, user_email: str, document_contents: List[str], analysis: str) -> str:
-        try:
-            document = {
-                'type': 'research',
-                'user_email': user_email,
-                'document_contents': document_contents,
-                'analysis': analysis,
-                'created_at': datetime.now(),
-                'updated_at': datetime.now()
-            }
-            result = await self.collection.insert_one(document)
-            return str(result.inserted_id)
-        except Exception as e:
-            logger.error(f"Error saving research: {e}")
-            raise
-
-    async def save_article_draft(
-        self, 
-        user_email: str, 
-        research_id: str, 
-        content: str, 
+    async def save_content(
+        self,
+        user_email: str,
+        content_type: str,
+        content: str,
         metadata: Dict[str, Any]
-    ) -> str:
+    ) -> Optional[str]:
+        """Save blog content"""
         try:
             document = {
-                'type': 'draft',
                 'user_email': user_email,
-                'research_id': research_id,
+                'type': content_type,
                 'content': content,
                 'metadata': metadata,
-                'created_at': datetime.now(),
-                'updated_at': datetime.now()
+                'created_at': datetime.utcnow(),
+                'updated_at': datetime.utcnow()
             }
             result = await self.collection.insert_one(document)
             return str(result.inserted_id)
         except Exception as e:
-            logger.error(f"Error saving article draft: {e}")
-            raise
+            logger.error(f"Error saving content: {str(e)}")
+            return None
 
     async def get_user_content(
-        self, 
-        user_email: str, 
+        self,
+        user_email: str,
         content_type: Optional[str] = None,
-        limit: int = 100
-    ) -> List[Dict]:
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """Get user's content"""
         try:
             query = {'user_email': user_email}
             if content_type:
                 query['type'] = content_type
+            
             cursor = self.collection.find(query).sort('created_at', -1).limit(limit)
             return await cursor.to_list(length=None)
         except Exception as e:
-            logger.error(f"Error retrieving user content: {e}")
+            logger.error(f"Error retrieving content: {str(e)}")
             return []
 
     async def update_content(
-        self, 
-        content_id: str, 
+        self,
+        content_id: str,
         updates: Dict[str, Any]
     ) -> bool:
+        """Update content"""
         try:
-            updates['updated_at'] = datetime.now()
+            updates['updated_at'] = datetime.utcnow()
             result = await self.collection.update_one(
                 {'_id': ObjectId(content_id)},
                 {'$set': updates}
             )
             return result.modified_count > 0
         except Exception as e:
-            logger.error(f"Error updating content: {e}")
+            logger.error(f"Error updating content: {str(e)}")
             return False
-
-class AsyncFileHandler:
-    def __init__(self, fs):
-        self.fs = fs
-
-    async def save_file(
-        self, 
-        filename: str, 
-        file_data: bytes, 
-        metadata: Dict[str, Any]
-    ) -> str:
-        try:
-            file_id = await self.fs.upload_from_stream(
-                filename,
-                file_data,
-                metadata={
-                    **metadata,
-                    'uploaded_at': datetime.now()
-                }
-            )
-            return str(file_id)
-        except Exception as e:
-            logger.error(f"Error saving file: {e}")
-            raise
-
-    async def get_file(self, file_id: str) -> Optional[bytes]:
-        try:
-            grid_out = await self.fs.open_download_stream(ObjectId(file_id))
-            return await grid_out.read()
-        except Exception as e:
-            logger.error(f"Error retrieving file: {e}")
-            return None
 
 class AsyncAnalyticsHandler:
     def __init__(self, db):
@@ -123,45 +75,39 @@ class AsyncAnalyticsHandler:
         self.collection = db.analytics
 
     async def log_activity(
-        self, 
-        user_email: str, 
-        activity_type: str, 
+        self,
+        user_email: str,
+        activity_type: str,
         metadata: Dict[str, Any]
     ) -> None:
+        """Log user activity"""
         try:
-            document = {
+            await self.collection.insert_one({
                 'user_email': user_email,
                 'activity_type': activity_type,
                 'metadata': metadata,
-                'timestamp': datetime.now()
-            }
-            await self.collection.insert_one(document)
+                'timestamp': datetime.utcnow()
+            })
         except Exception as e:
-            logger.error(f"Error logging activity: {e}")
+            logger.error(f"Error logging activity: {str(e)}")
 
     async def get_user_analytics(
-        self, 
-        user_email: str, 
+        self,
+        user_email: str,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
+        """Get user analytics"""
         try:
-            pipeline = [
-                {'$match': {
-                    'user_email': user_email,
-                    **({'timestamp': {
-                        '$gte': start_date,
-                        '$lte': end_date
-                    }} if start_date and end_date else {})
-                }},
-                {'$group': {
-                    '_id': '$activity_type',
-                    'count': {'$sum': 1},
-                    'last_activity': {'$max': '$timestamp'}
-                }}
-            ]
-            cursor = self.collection.aggregate(pipeline)
+            query = {'user_email': user_email}
+            if start_date and end_date:
+                query['timestamp'] = {
+                    '$gte': start_date,
+                    '$lte': end_date
+                }
+            
+            cursor = self.collection.find(query).sort('timestamp', -1)
             return await cursor.to_list(length=None)
         except Exception as e:
-            logger.error(f"Error retrieving analytics: {e}")
+            logger.error(f"Error retrieving analytics: {str(e)}")
             return []

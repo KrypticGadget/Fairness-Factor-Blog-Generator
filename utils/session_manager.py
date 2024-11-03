@@ -1,9 +1,10 @@
 # utils/session_manager.py
+
 from datetime import datetime
 import logging
-from typing import Optional, Dict, Any, List  # Add List to the imports
+from typing import Optional, Dict, Any, List
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from bson import ObjectId  # Add this import for ObjectId
+from bson import ObjectId
 
 logger = logging.getLogger(__name__)
 
@@ -76,3 +77,24 @@ class AsyncSessionManager:
         except Exception as e:
             logger.error(f"Error retrieving active sessions: {str(e)}")
             return []
+
+    async def cleanup_expired_sessions(self, expiry_hours: int = 24) -> int:
+        """Clean up expired sessions"""
+        try:
+            expiry_time = datetime.now() - timedelta(hours=expiry_hours)
+            result = await self.sessions_collection.update_many(
+                {
+                    'active': True,
+                    'last_accessed': {'$lt': expiry_time}
+                },
+                {
+                    '$set': {
+                        'active': False,
+                        'ended_at': datetime.now()
+                    }
+                }
+            )
+            return result.modified_count
+        except Exception as e:
+            logger.error(f"Error cleaning up expired sessions: {str(e)}")
+            return 0
